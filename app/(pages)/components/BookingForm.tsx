@@ -45,9 +45,10 @@ export default function BookingForm({ room }: BookingFormProps) {
       toast.success("Booking successful!");
       // e.currentTarget.reset();
       router.push("/mybookings");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Booking failed";
+      toast.error(errorMessage || "Booking failed");
       console.error("Booking error:", error);
-      toast.error(error?.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
       submittingRef.current = false;

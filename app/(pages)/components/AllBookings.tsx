@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAllBookings } from "@/services/api";
 import { format } from "date-fns";
+import { toast } from "react-toastify";
 
 interface Booking {
   _id: string;
@@ -27,9 +28,10 @@ export default function AdminBookings() {
         const res = await getAllBookings();
         console.log("Response from API:", res);
         setBookings(res.data?.data || res.data || []);
-      } catch (err: any) {
-        console.error("Failed to fetch all bookings:", err);
-        setError(err.response?.data?.message || "Failed to load bookings");
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to fetch bookings";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }

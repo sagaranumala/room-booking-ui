@@ -27,8 +27,9 @@ export default function Login() {
       } else {
         toast.error("Login failed. No user returned.");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Login failed");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Login failed";
+      toast.error(errorMessage || "Login failed");
     } finally {
       setLoading(false);
     }

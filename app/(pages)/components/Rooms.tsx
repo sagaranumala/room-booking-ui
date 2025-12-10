@@ -13,6 +13,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import CreateRoomModal from "./CreateRoomModal";
 
 export interface Room {
+  _id?:string
   id: string;
   name: string;
   capacity: number;
@@ -33,7 +34,7 @@ export default function RoomsPage() {
     setLoading(true);
     try {
       const res = await getRooms();
-      const mappedRooms = res.data.data.map((room: any) => ({
+      const mappedRooms = res.data.data.map((room: Room) => ({
         id: room._id,
         name: room.name,
         capacity: room.capacity,

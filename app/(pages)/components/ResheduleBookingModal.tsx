@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { BookingData } from "../types";
 
 interface RescheduleModalProps {
-  booking: any; // BookingData type works too
+  booking: BookingData; // BookingData type works too
   onClose: () => void;
   onSubmit: (startTime: string, endTime: string) => void;
 }

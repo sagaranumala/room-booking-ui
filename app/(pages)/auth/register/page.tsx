@@ -8,11 +8,17 @@ import Link from "next/link";
 import { useAuth } from "@/app/providers/AuthProvider";
 
 
+type RegisterFormData = {
+  name: string;
+  email: string;
+  password: string;
+};
+
 export default function Register() {
   const router = useRouter();
   const { register } = useAuth();  // <-- get register function from context
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegisterFormData>({
     name: "",
     email: "",
     password: "",
@@ -27,9 +33,10 @@ export default function Register() {
     try {
       await register(form.name, form.email, form.password);
       toast.success("Registration successful! Redirecting...");
-      router.push("/");  
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Registration failed");
+      router.push("/");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed";
+      toast.error(errorMessage || "Registration failed");
       console.error("[Register Error]:", err);
     } finally {
       setLoading(false);
@@ -46,13 +53,17 @@ export default function Register() {
         </h2>
 
         <form onSubmit={handleRegister} className="space-y-4">
-          {Object.keys(form).map((key) => (
+          {(Object.keys(form) as Array<keyof RegisterFormData>).map((key) => (
             <input
               key={key}
-              type={key === "password" ? "password" : key === "email" ? "email" : "text"}
+              type={
+                key === "password" ? "password" :
+                  key === "email" ? "email" :
+                    "text"
+              }
               placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
               className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-400 outline-none"
-              value={(form as any)[key]}
+              value={form[key]}
               onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               required
             />
@@ -61,11 +72,10 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full p-3 rounded-xl text-white transition ${
-              loading
+            className={`w-full p-3 rounded-xl text-white transition ${loading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-purple-600 hover:bg-purple-700"
-            }`}
+              }`}
           >
             {loading ? "Registering..." : "Register"}
           </button>

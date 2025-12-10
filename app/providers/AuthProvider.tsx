@@ -10,6 +10,22 @@ interface User {
   role?: "user" | "admin";
   name?: string;
   phone?: string;
+  token?: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  data: {
+    user: User;
+    token?: string;
+  };
+  message?: string;
+}
+
+interface RegisterResponse {
+  success: boolean;
+  data: User & { token?: string };
+  message?: string;
 }
 
 interface AuthContextType {
@@ -24,8 +40,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: false,
-  login: async () => { throw new Error("login not implemented"); },
-  register: async () => { throw new Error("register not implemented"); },
+  login: async () => {
+    throw new Error("login not implemented");
+  },
+  register: async () => {
+    throw new Error("register not implemented");
+  },
   logout: () => {},
   isAdmin: false,
 });
@@ -35,66 +55,96 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load user from sessionStorage on mount
+  // Load user from session storage
   useEffect(() => {
     const storedUser = sessionStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
   }, []);
 
-  const login = async (email: string, password: string) => {
-  setLoading(true);
-  try {
-    const res = await api.post("/auth/login", { email, password }, { withCredentials: true });
+  // -----------------------------
+  // LOGIN
+  // -----------------------------
+  const login = async (email: string, password: string): Promise<User> => {
+    setLoading(true);
+    try {
+      const res = await api.post<LoginResponse>(
+        "/auth/login",
+        { email, password },
+        { withCredentials: true }
+      );
 
-    if (res.status === 200 && res.data.success) {
-      const loggedUser = res.data.data.user as User;
-      setUser(loggedUser);
-      sessionStorage.setItem("user", JSON.stringify(loggedUser));
-      if (res.data.data.token) sessionStorage.setItem("token", res.data.data.token);
-      return loggedUser; // ✅ return user
-    } else {
-      throw new Error(res.data?.message || "Login failed");
-    }
-  } catch (err: any) {
-    setUser(null);
-    throw new Error(err.response?.data?.message || "Login failed. Check credentials.");
-  } finally {
-    setLoading(false);
-  }
-};
+      if (res.status === 200 && res.data.success) {
+        const loggedUser = res.data.data.user;
 
+        setUser(loggedUser);
+        sessionStorage.setItem("user", JSON.stringify(loggedUser));
+        if (res.data.data.token) {
+          sessionStorage.setItem("token", res.data.data.token);
+        }
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
-  setLoading(true);
-  try {
-    const res = await api.post(
-      "/auth/register",
-      { name, email, password, phone },
-      { withCredentials: true }
-    );
-
-    if (res.status === 201 && res.data.success) {
-      const registeredUser = res.data.data as User; // same style as login
-
-      setUser(registeredUser);
-      sessionStorage.setItem("user", JSON.stringify(registeredUser));
-
-      // if token is returned, store it
-      if (res.data.data.token) {
-        sessionStorage.setItem("token", res.data.data.token);
+        return loggedUser;
       }
 
-      return registeredUser;
-    } else {
-      throw new Error(res.data?.message || "Registration failed");
-    }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || "Registration failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      throw new Error(res.data.message || "Login failed");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Login failed. Check credentials.";
 
+      setUser(null);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -----------------------------
+  // REGISTER
+  // -----------------------------
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    phone?: string
+  ): Promise<User> => {
+    setLoading(true);
+
+    try {
+      const res = await api.post<RegisterResponse>(
+        "/auth/register",
+        { name, email, password, phone },
+        { withCredentials: true }
+      );
+
+      if (res.status === 201 && res.data.success) {
+        const registeredUser = res.data.data;
+
+        setUser(registeredUser);
+        sessionStorage.setItem("user", JSON.stringify(registeredUser));
+
+        if (registeredUser.token) {
+          sessionStorage.setItem("token", registeredUser.token);
+        }
+
+        return registeredUser;
+      }
+
+      throw new Error(res.data.message || "Registration failed");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Registration failed";
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -----------------------------
+  // LOGOUT
+  // -----------------------------
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem("user");
@@ -105,7 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, isAdmin }}
+    >
       {children}
     </AuthContext.Provider>
   );

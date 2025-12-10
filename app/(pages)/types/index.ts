@@ -52,7 +52,7 @@ export interface Room {
 }
 
 // API Response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   message?: string;
