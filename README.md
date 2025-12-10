@@ -1,36 +1,151 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Max Room Booking System
 
-## Getting Started
+This project is a **room booking system** with a backend (Node.js/Express + MongoDB) and a frontend (React/Next.js). It supports user authentication, room management, and booking with conflict handling.
 
-First, run the development server:
+---
+
+## Table of Contents
+
+* [How to Run Backend](#how-to-run-backend)
+* [How to Run Frontend](#how-to-run-frontend)
+* [Booking Conflict Logic Explained](#booking-conflict-logic-explained)
+* [Authentication Flow Explained](#authentication-flow-explained)
+
+---
+
+## How to Run Backend
+
+1. **Clone the repository**
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd max-room-booking
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd backend
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. **Configure environment variables**
 
-## Learn More
+Create a `.env` file in `backend` folder:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/max-room-booking
+JWT_SECRET=your_secret_key
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Run backend**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# For development with hot reload
+npm run dev
 
-## Deploy on Vercel
+# For production
+npm start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The backend runs on `http://localhost:5000`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## How to Run Frontend
+
+1. **Install dependencies**
+
+```bash
+cd frontend
+npm install
+```
+
+2. **Configure environment variables**
+
+Create a `.env.local` file in `frontend` folder:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
+
+3. **Run frontend**
+
+```bash
+# Development mode
+npm run dev
+
+# Production build
+npm run build
+npm start
+```
+
+The frontend runs on `http://localhost:3000`.
+
+---
+
+## Booking Conflict Logic Explained
+
+The system prevents overlapping bookings for the **same room**.
+
+**Conflict rules:**
+
+1. When creating or rescheduling a booking:
+
+   * `startTime` and `endTime` are checked against all **existing confirmed or active bookings** for that room.
+   * A conflict exists if:
+
+     ```
+     requestedStartTime < existingEndTime &&
+     requestedEndTime > existingStartTime
+     ```
+2. If a conflict exists, the booking request is rejected with a message:
+
+```json
+{
+  "success": false,
+  "message": "Room is not available for the selected time range"
+}
+```
+
+3. Optionally, when rescheduling, you can **exclude the current booking** from the conflict check.
+
+---
+
+## Authentication Flow Explained
+
+1. **User Registration & Login**
+
+   * Users register with `name`, `email`, and `password`.
+   * Passwords are hashed before storing in the database.
+   * JWT token is issued upon successful login.
+
+2. **Token-Based Authentication**
+
+   * Protected routes require a valid JWT token in the `Authorization` header:
+
+     ```
+     Authorization: Bearer <token>
+     ```
+   * Middleware verifies the token and attaches user info to `req.user`.
+
+3. **Role-Based Access**
+
+   * Users have roles: `user` or `admin`.
+   * Certain routes (like listing all bookings, grouping by room) are restricted to `admin`.
+
+4. **Session Flow**
+
+   1. User logs in → receives JWT.
+   2. Client stores JWT (localStorage or cookie).
+   3. Client sends JWT on each API request.
+   4. Backend validates token → allows or denies access.
+
+---
+
+✅ **Optional Improvements for README**
+
+* Add screenshots of the UI.
+* Add API endpoint list with request/response examples.
+* Add testing instructions (Postman collection or automated tests).
