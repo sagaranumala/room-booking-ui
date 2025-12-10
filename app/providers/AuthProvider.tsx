@@ -65,25 +65,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const register = async (name: string, email: string, password: string, phone?: string) => {
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/register", { name, email, password, phone }, { withCredentials: true });
+  setLoading(true);
+  try {
+    const res = await api.post(
+      "/auth/register",
+      { name, email, password, phone },
+      { withCredentials: true }
+    );
 
-      if (res.status === 201 && res.data.user) {
-        const registeredUser = res.data.user as User;
-        setUser(registeredUser);
-        sessionStorage.setItem("user", JSON.stringify(registeredUser));
-        if (res.data.token) sessionStorage.setItem("token", res.data.token);
-        return registeredUser;
-      } else {
-        throw new Error(res.data?.message || "Registration failed");
+    if (res.status === 201 && res.data.success) {
+      const registeredUser = res.data.data as User; // same style as login
+
+      setUser(registeredUser);
+      sessionStorage.setItem("user", JSON.stringify(registeredUser));
+
+      // if token is returned, store it
+      if (res.data.data.token) {
+        sessionStorage.setItem("token", res.data.data.token);
       }
-    } catch (err: any) {
-      throw new Error(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
+
+      return registeredUser;
+    } else {
+      throw new Error(res.data?.message || "Registration failed");
     }
-  };
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || "Registration failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const logout = () => {
     setUser(null);
