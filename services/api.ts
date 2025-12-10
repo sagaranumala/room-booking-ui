@@ -3,7 +3,7 @@ import { BookingData } from "../app/(pages)/components/BookingForm";
 import axios from "axios";
 
 // API Base URL
-const API_URL = "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 console.log("API URL:", API_URL);
 
 // Create Axios instance
