@@ -1,11 +1,11 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState } from "react";
+import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/services/api";
 
 interface User {
-  userId: string;
+  _id: string;
   email: string;
   role?: "user" | "admin";
   name?: string;
@@ -15,96 +15,81 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<User>;
+  logout: () => void;
   isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: false,
-  login: async () => ({ success: false }),
-  register: async () => ({ success: false }),
-  logout: async () => {},
+  login: async () => { throw new Error("login not implemented"); },
+  register: async () => { throw new Error("register not implemented"); },
+  logout: () => {},
   isAdmin: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = sessionStorage.getItem("user");
-      return storedUser ? JSON.parse(storedUser) : null;
-    }
-    return null;
-  });
-
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ---------------- Login ----------------
+  // Load user from sessionStorage on mount
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem("user");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
   const login = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/login", { email, password }, { withCredentials: true });
+  setLoading(true);
+  try {
+    const res = await api.post("/auth/login", { email, password }, { withCredentials: true });
 
-      if (res.status === 200 && res.data.user) {
-        setUser(res.data.user);
-        sessionStorage.setItem("user", JSON.stringify(res.data.user));
-        if (res.data.token) sessionStorage.setItem("token", res.data.token);
-
-        return { success: true };
-      } else {
-        return { success: false, message: "Invalid login response" };
-      }
-    } catch (err: any) {
-      console.error("Login error:", err);
-      const message =
-        err.response?.data?.message || "Login failed. Please check your credentials.";
-      setUser(null);
-      return { success: false, message };
-    } finally {
-      setLoading(false);
+    if (res.status === 200 && res.data.success) {
+      const loggedUser = res.data.data.user as User;
+      setUser(loggedUser);
+      sessionStorage.setItem("user", JSON.stringify(loggedUser));
+      if (res.data.data.token) sessionStorage.setItem("token", res.data.data.token);
+      return loggedUser; // ✅ return user
+    } else {
+      throw new Error(res.data?.message || "Login failed");
     }
-  };
+  } catch (err: any) {
+    setUser(null);
+    throw new Error(err.response?.data?.message || "Login failed. Check credentials.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // ---------------- Register ----------------
+
   const register = async (name: string, email: string, password: string, phone?: string) => {
     setLoading(true);
     try {
       const res = await api.post("/auth/register", { name, email, password, phone }, { withCredentials: true });
 
       if (res.status === 201 && res.data.user) {
-        setUser(res.data.user);
-        sessionStorage.setItem("user", JSON.stringify(res.data.user));
+        const registeredUser = res.data.user as User;
+        setUser(registeredUser);
+        sessionStorage.setItem("user", JSON.stringify(registeredUser));
         if (res.data.token) sessionStorage.setItem("token", res.data.token);
-
-        return { success: true };
+        return registeredUser;
       } else {
-        return { success: false, message: "Invalid registration response" };
+        throw new Error(res.data?.message || "Registration failed");
       }
     } catch (err: any) {
-      console.error("Register error:", err);
-      const message =
-        err.response?.data?.message || "Registration failed. Please try again.";
-      return { success: false, message };
+      throw new Error(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // ---------------- Logout ----------------
-  const logout = async () => {
-    setLoading(true);
-    try {
-      setUser(null);
-      sessionStorage.removeItem("user");
-      sessionStorage.removeItem("token");
-      router.push("/auth/login");
-    } finally {
-      setLoading(false);
-    }
+  const logout = () => {
+    setUser(null);
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    router.push("/auth/login");
   };
 
   const isAdmin = user?.role === "admin";
@@ -116,6 +101,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);
