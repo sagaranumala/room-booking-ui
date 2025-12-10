@@ -15,7 +15,6 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    phone: "",
     password: "",
   });
 
@@ -26,7 +25,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(form.name, form.email, form.password, form.phone);
+      await register(form.name, form.email, form.password);
       toast.success("Registration successful! Redirecting...");
       router.push("/");  
     } catch (err: any) {
